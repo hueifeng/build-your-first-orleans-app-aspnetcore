@@ -49,10 +49,12 @@ app.MapGet("/", () => "Hello World!");
 
 app.MapGet("/shorten/{*path}", async (HttpContext context, string path) =>
 {
-    // var shortenedRouteSegment = Guid.NewGuid().GetHashCode().ToString("X");
-    var shortenedRouteSegment = ShortUrlGenerator.MurmurHash3(path).ToString();
-    var shortenerGrain = grainFactory.GetGrain<IUrlShortenerGrain>(shortenedRouteSegment);
-    await shortenerGrain.SetUrl(shortenedRouteSegment, path);
+    //var shortenedRouteSegment = Guid.NewGuid().GetHashCode().ToString("X");
+    var shortenedRouteSegment = ShortUrlGenerator.MurmurHash3(path);
+    var shortenerGrain = grainFactory.GetGrain<IUrlShortenerGrain>(shortenedRouteSegment.ToString());
+    var code = ShortUrlGenerator.Generator(shortenedRouteSegment);
+
+    await shortenerGrain.SetUrl(code, shortenedRouteSegment.ToString(), path);
     var resultBuilder = new UriBuilder(context.Request.GetEncodedUrl())
     {
         Path = $"/go/{shortenedRouteSegment}"
@@ -70,6 +72,27 @@ app.MapGet("/go/{shortenedRouteSegment}", async (string shortenedRouteSegment) =
 });
 
 app.Run();
+
+//string GetCode(int num)
+//{
+
+//    num = Math.Abs(num);
+//    String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+//    StringBuilder sb = new StringBuilder();
+//    int remainder;
+
+//    while (num > 62 - 1)
+//    {
+//        //remainder = long.ValueOf(num % 62).intValue();
+//        remainder = num % 62;
+//        sb.Append(chars[remainder]);
+//        num = num / 62;
+//    }
+//    sb.Append(chars[num]);
+//    return sb.ToString();
+
+//}
 
 public class UrlDictionary
 {
@@ -101,9 +124,9 @@ public class UrlShortenerGrain : Grain, IUrlShortenerGrain
         _cache = state;
     }
 
-    public async Task SetUrl(string shortenedRouteSegment, string fullUrl)
+    public async Task SetUrl(string shortenedRouteSegment, string code, string fullUrl)
     {
-        _cache.State = new UrlDictionary(shortenedRouteSegment, fullUrl);
+        _cache.State = new UrlDictionary(code, shortenedRouteSegment);
         await _cache.WriteStateAsync();
     }
 
@@ -115,6 +138,6 @@ public class UrlShortenerGrain : Grain, IUrlShortenerGrain
 
 public interface IUrlShortenerGrain : IGrainWithStringKey
 {
-    Task SetUrl(string shortenedRouteSegment, string fullUrl);
+    Task SetUrl(string shortenedRouteSegment, string code, string fullUrl);
     Task<string> GetUrl();
 }

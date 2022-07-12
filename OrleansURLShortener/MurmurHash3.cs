@@ -1,4 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Text;
 
 namespace OrleansURLShortener
 {
@@ -13,6 +15,134 @@ namespace OrleansURLShortener
     /// </summary>
     public class MurmurHash3
     {
+
+        #region Hash32
+        /// <summary>MurmurHash3 32-bit implementation for strings.</summary>
+        /// <param name="value">The string to hash.</param>
+        /// <param name="seed">The seed to initialize with.</param>
+        /// <returns>The 32-bit hash.</returns>
+        public static uint Hash32(string value, uint seed)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            int size = Encoding.UTF8.GetMaxByteCount(value.Length);
+            Span<byte> span = size <= 256 ? stackalloc byte[size] : new byte[size];
+            int len = Encoding.UTF8.GetBytes(value, span);
+            return MurmurHash3.Hash32(span.Slice(0, len), seed);
+        }
+
+        /// <summary>MurmurHash3 32-bit implementation for booleans.</summary>
+        /// <param name="value">The data to hash.</param>
+        /// <param name="seed">The seed to initialize with.</param>
+        /// <returns>The 32-bit hash.</returns>
+        public static uint Hash32(bool value, uint seed)
+        {
+            // Ensure that a bool is ALWAYS a single byte encoding with 1 for true and 0 for false.
+            return MurmurHash3.Hash32((byte)(value ? 1 : 0), seed);
+        }
+
+        /// <summary>MurmurHash3 32-bit implementation.</summary>
+        /// <param name="value">The data to hash.</param>
+        /// <param name="seed">The seed to initialize with.</param>
+        /// <returns>The 32-bit hash.</returns>
+        public static unsafe uint Hash32<T>(T value, uint seed)
+            where T : unmanaged
+        {
+            ReadOnlySpan<T> span = new ReadOnlySpan<T>(&value, 1);
+            return MurmurHash3.Hash32(MemoryMarshal.AsBytes(span), seed);
+        }
+
+        /// <summary>MurmurHash3 32-bit implementation.</summary>
+        /// <param name="span">The data to hash.</param>
+        /// <param name="seed">The seed to initialize with.</param>
+        /// <returns>The 32-bit hash.</returns>
+        public static unsafe uint Hash32(ReadOnlySpan<byte> span, uint seed)
+        {
+            if (!BitConverter.IsLittleEndian)
+            {
+                throw new InvalidOperationException("Host machine needs to be little endian.");
+            }
+
+            const uint c1 = 0xcc9e2d51;
+            const uint c2 = 0x1b873593;
+
+            uint h1 = seed;
+
+            // body
+            unchecked
+            {
+                fixed (byte* bytes = span)
+                {
+                    for (int i = 0; i < span.Length - 3; i += 4)
+                    {
+                        uint k1 = *(uint*)(bytes + i);
+
+                        k1 *= c1;
+                        k1 = MurmurHash3.RotateLeft32(k1, 15);
+                        k1 *= c2;
+
+                        h1 ^= k1;
+                        h1 = MurmurHash3.RotateLeft32(h1, 13);
+                        h1 = (h1 * 5) + 0xe6546b64;
+                    }
+
+                    {
+                        // tail
+                        uint k = 0;
+
+                        switch (span.Length & 3)
+                        {
+                            case 3:
+                                k ^= (uint)bytes[span.Length - 1] << 16;
+                                k ^= (uint)bytes[span.Length - 2] << 8;
+                                k ^= (uint)bytes[span.Length - 3];
+                                break;
+
+                            case 2:
+                                k ^= (uint)bytes[span.Length - 1] << 8;
+                                k ^= (uint)bytes[span.Length - 2];
+                                break;
+
+                            case 1:
+                                k ^= (uint)bytes[span.Length - 1];
+                                break;
+                        }
+
+                        k *= c1;
+                        k = MurmurHash3.RotateLeft32(k, 15);
+                        k *= c2;
+                        h1 ^= k;
+                    }
+                }
+
+                // finalization
+                h1 ^= (uint)span.Length;
+                h1 ^= h1 >> 16;
+                h1 *= 0x85ebca6b;
+                h1 ^= h1 >> 13;
+                h1 *= 0xc2b2ae35;
+                h1 ^= h1 >> 16;
+            }
+
+            return h1;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static uint RotateLeft32(uint n, int numBits)
+        {
+            if (numBits >= 32)
+            {
+                throw new ArgumentOutOfRangeException($"{nameof(numBits)} must be less than 32");
+            }
+
+            return (n << numBits) | (n >> (32 - numBits));
+        }
+        #endregion
+
+
         /// <summary>Computes the hash value for the specified byte array.</summary>
         /// <param name="buffer">The input to compute the hash code for.</param>
         /// <returns>The computed hash code.</returns>
@@ -23,82 +153,6 @@ namespace OrleansURLShortener
             return ComputeHash(buffer, 0, buffer.Length);
         }
 
-        public static unsafe uint ComputeHash32(byte[] bytes, uint seed = 0)
-        {
-            fixed (void* src = bytes)
-            {
-                return MurmurHash3_x86_32(src, bytes?.Length ?? 0, seed);
-            }
-        }
-
-        private static unsafe uint MurmurHash3_x86_32(void* key, int len, uint seed)
-        {
-            const uint c1 = 0xcc9e2d51;
-            const uint c2 = 0x1b873593;
-
-            uint h1 = seed;
-            byte* data = (byte*)key;
-            int nblocks = len / 4;
-
-            // Body
-            uint k1 = 0;
-            uint* blocks = (uint*)(data + nblocks * 4);
-            for (int i = -nblocks; i != 0; i++)
-            {
-                k1 = blocks[i];
-
-                k1 *= c1;
-                k1 = rotl32(k1, 15);
-                k1 *= c2;
-
-                h1 ^= k1;
-                h1 = rotl32(h1, 13);
-                h1 = h1 * 5 + 0xe6546b64;
-            }
-
-            // Tail
-            k1 = 0;
-            byte* tail = data + nblocks * 4;
-            switch (len & 3)
-            {
-                case 3:
-                    k1 ^= ((uint)tail[2]) << 16;
-                    goto case 2;
-                case 2:
-                    k1 ^= ((uint)tail[1]) << 8;
-                    goto case 1;
-                case 1:
-                    k1 ^= tail[0];
-                    k1 *= c1;
-                    k1 = rotl32(k1, 15);
-                    k1 *= c2;
-                    h1 ^= k1;
-                    break;
-            };
-
-            // Finalization
-            h1 ^= (uint)len;
-            h1 = fmix32(h1);
-
-            return h1;
-        }
-
-
-        private static uint fmix32(uint h)
-        {
-            h ^= h >> 16;
-            h *= 0x85ebca6b;
-            h ^= h >> 13;
-            h *= 0xc2b2ae35;
-            h ^= h >> 16;
-            return h;
-        }
-
-
-        private static uint rotl32(uint x, byte r)
-        {
-            return (x << r) | (x >> (32 - r));
-        }
 
         /// <summary>Computes the hash value for the specified region of the specified byte array.</summary>
         /// <param name="buffer">The input to compute the hash code for.</param>

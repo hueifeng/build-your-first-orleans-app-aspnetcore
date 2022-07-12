@@ -40,7 +40,6 @@ namespace OrleansURLShortener
                 str += list[pos];
             }
             return str;
-
         }
 
         public static long MurmurHash3(string url)
