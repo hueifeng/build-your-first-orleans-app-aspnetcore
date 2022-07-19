@@ -42,12 +42,13 @@ namespace OrleansURLShortener
             return str;
         }
 
-        public static long MurmurHash3(string url)
+        public static uint MurmurHash(string url)
         {
-            var hasher = new MurmurHash3();
-            var bytes = Encoding.UTF8.GetBytes(url);
-            var result = hasher.ComputeHash(bytes);
-            return System.BitConverter.ToInt64(result, 0);
+            // var hasher = new MurmurHash3();
+            // var bytes = Encoding.UTF8.GetBytes(url);
+            var result = MurmurHash3.Hash32(url, 0);
+            return result;
+            //return System.BitConverter.ToInt32(result, 0);
             //return string.Concat(Array.ConvertAll(result, x => x.ToString("x2")));
         }
     }

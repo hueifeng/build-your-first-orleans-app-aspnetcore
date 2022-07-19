@@ -1,17 +1,15 @@
-﻿using System.Text;
+﻿using System.Security.Cryptography;
+using System.Text;
 using OrleansURLShortener;
 
 Dictionary<string, long> list = new Dictionary<string, long>();
 
 for (long i = 0; i < 10000000000; i++)
 {
-    //var hash = ShortUrlGenerator.MurmurHash3(i + "test"+Random.Shared.Next(10000));
-    //var code = ShortUrlGenerator.Generator(hash);
+    var hash = ShortUrlGenerator.MurmurHash(i + "test" + Random.Shared.Next(10000));
+    var code = ShortUrlGenerator.Generator(hash);
+    list.Add(code, i);
 
-
-    ////var code = ShortUrlGenerator.Generator(hash);
-    ////var code = GetCode(hash);
-    //list.Add(Math.Abs(hash).ToString(), i);
 
     //byte[] srcBytes = Encoding.UTF8.GetBytes(i+"t1sa");
     //// HashSizeInBits=32 or 128
@@ -24,15 +22,16 @@ for (long i = 0; i < 10000000000; i++)
     //list.Add(code, i);
 
 
-    var bytes = Encoding.UTF8.GetBytes(i + "test"+Random.Shared.Next(10000));
-    var hashConfig = new System.Data.HashFunction.MurmurHash.MurmurHash3Config();
-    hashConfig.Seed = 0;
-    hashConfig.HashSizeInBits = 128;
-    var murmurHash3 = System.Data.HashFunction.MurmurHash.MurmurHash3Factory.Instance.Create(hashConfig);
-    var hv = murmurHash3.ComputeHash(bytes);
-    var base64 = hv.AsBase64String();
-    var hashBytes = hv.Hash;
-    //var code = ShortUrlGenerator.Generator(i);
+    //var bytes = Encoding.UTF8.GetBytes(i + "test" + Random.Shared.Next(10000));
+    //var hashConfig = new System.Data.HashFunction.MurmurHash.MurmurHash3Config();
+    //hashConfig.Seed = 0;
+    //hashConfig.HashSizeInBits = 32;
+    //var murmurHash3 = System.Data.HashFunction.MurmurHash.MurmurHash3Factory.Instance.Create(hashConfig);
+    //var hv = murmurHash3.ComputeHash(bytes);
+    //var base64 = hv.AsBase64String();
+    //var hashBytes = hv.Hash;
+
+    //var code = ShortUrlGenerator.Generator(System.BitConverter.ToInt32(hashBytes, 0));
     //list.Add(code, i);
 }
 
@@ -53,3 +52,4 @@ for (long i = 0; i < 10000000000; i++)
 var isRepeat = list.GroupBy(i => i).Where(g => g.Count() > 1);
 var count = isRepeat.Count();
 Console.ReadLine();
+

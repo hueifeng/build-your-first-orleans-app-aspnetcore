@@ -50,7 +50,7 @@ app.MapGet("/", () => "Hello World!");
 app.MapGet("/shorten/{*path}", async (HttpContext context, string path) =>
 {
     //var shortenedRouteSegment = Guid.NewGuid().GetHashCode().ToString("X");
-    var shortenedRouteSegment = ShortUrlGenerator.MurmurHash3(path);
+    var shortenedRouteSegment = ShortUrlGenerator.MurmurHash(path);
     var shortenerGrain = grainFactory.GetGrain<IUrlShortenerGrain>(shortenedRouteSegment.ToString());
     var code = ShortUrlGenerator.Generator(shortenedRouteSegment);
 
@@ -73,26 +73,6 @@ app.MapGet("/go/{shortenedRouteSegment}", async (string shortenedRouteSegment) =
 
 app.Run();
 
-//string GetCode(int num)
-//{
-
-//    num = Math.Abs(num);
-//    String chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-//    StringBuilder sb = new StringBuilder();
-//    int remainder;
-
-//    while (num > 62 - 1)
-//    {
-//        //remainder = long.ValueOf(num % 62).intValue();
-//        remainder = num % 62;
-//        sb.Append(chars[remainder]);
-//        num = num / 62;
-//    }
-//    sb.Append(chars[num]);
-//    return sb.ToString();
-
-//}
 
 public class UrlDictionary
 {
