@@ -12,32 +12,32 @@ var builder = WebApplication.CreateBuilder();
 
 builder.Host.UseOrleans(siloBuilder =>
 {
-    //siloBuilder.UseLocalhostClustering();
-    //siloBuilder.AddMemoryGrainStorage("urls");
-    siloBuilder
-        .UseLocalhostClustering()
-        //.UseAdoNetClustering(options =>
-        //{
-        //    options.Invariant = "Npgsql";
-        //    options.ConnectionString =
-        //        "Server=localhost;Port=5432;User Id=postgres;Password=mysecretpassword;Database=test.db";
-        //})
-        .Configure<ClusterOptions>(options =>
-        {
-            options.ClusterId = "dev";
-            options.ServiceId = "OrleansBasics";
-        })
-        .Configure<EndpointOptions>(options =>
-        {
-            options.AdvertisedIPAddress = IPAddress.Loopback;
-        })
-        .ConfigureApplicationParts(x => x.AddApplicationPart(Assembly.GetEntryAssembly()))
-        .AddAdoNetGrainStorage("urls", options =>
-        {
-            options.Invariant = "Npgsql";
-            options.ConnectionString =
-                "Server=localhost;Port=5432;User Id=postgres;Password=mysecretpassword;Database=test.db";
-        });
+    siloBuilder.UseLocalhostClustering();
+    siloBuilder.AddMemoryGrainStorage("urls");
+    //siloBuilder
+    //    .UseLocalhostClustering()
+    //    //.UseAdoNetClustering(options =>
+    //    //{
+    //    //    options.Invariant = "Npgsql";
+    //    //    options.ConnectionString =
+    //    //        "Server=localhost;Port=5432;User Id=postgres;Password=mysecretpassword;Database=test.db";
+    //    //})
+    //    .Configure<ClusterOptions>(options =>
+    //    {
+    //        options.ClusterId = "dev";
+    //        options.ServiceId = "OrleansBasics";
+    //    })
+    //    .Configure<EndpointOptions>(options =>
+    //    {
+    //        options.AdvertisedIPAddress = IPAddress.Loopback;
+    //    })
+    //    .ConfigureApplicationParts(x => x.AddApplicationPart(Assembly.GetEntryAssembly()))
+    //    .AddAdoNetGrainStorage("urls", options =>
+    //    {
+    //        options.Invariant = "Npgsql";
+    //        options.ConnectionString =
+    //            "Server=localhost;Port=5432;User Id=postgres;Password=mysecretpassword;Database=test.db";
+    //    });
 
 });
 
@@ -51,8 +51,8 @@ app.MapGet("/shorten/{*path}", async (HttpContext context, string path) =>
 {
     //var shortenedRouteSegment = Guid.NewGuid().GetHashCode().ToString("X");
     var shortenedRouteSegment = ShortUrlGenerator.MurmurHash(path);
-    var shortenerGrain = grainFactory.GetGrain<IUrlShortenerGrain>(shortenedRouteSegment.ToString());
     var code = ShortUrlGenerator.Generator(shortenedRouteSegment);
+    var shortenerGrain = grainFactory.GetGrain<IUrlShortenerGrain>(code);
 
     await shortenerGrain.SetUrl(code, shortenedRouteSegment.ToString(), path);
     var resultBuilder = new UriBuilder(context.Request.GetEncodedUrl())
@@ -93,7 +93,7 @@ public class UrlDictionary
 
 public class UrlShortenerGrain : Grain, IUrlShortenerGrain
 {
-    private IPersistentState<UrlDictionary> _cache;
+    private IPersistentState<UrlDictionary> _urlDictState;
 
     public UrlShortenerGrain(
         [PersistentState(
@@ -101,18 +101,24 @@ public class UrlShortenerGrain : Grain, IUrlShortenerGrain
             storageName: "urls")]
             IPersistentState<UrlDictionary> state)
     {
-        _cache = state;
+        _urlDictState = state;
     }
 
     public async Task SetUrl(string shortenedRouteSegment, string code, string fullUrl)
     {
-        _cache.State = new UrlDictionary(code, shortenedRouteSegment);
-        await _cache.WriteStateAsync();
+        var exist = _urlDictState.RecordExists;
+        if (_urlDictState.State == default)
+        {
+
+        }
+        var a = _urlDictState.State;
+        _urlDictState.State = new UrlDictionary(code, shortenedRouteSegment);
+        await _urlDictState.WriteStateAsync();
     }
 
     public Task<string> GetUrl()
     {
-        return Task.FromResult(_cache.State.HashVal);
+        return Task.FromResult(_urlDictState.State.HashVal);
     }
 }
 
