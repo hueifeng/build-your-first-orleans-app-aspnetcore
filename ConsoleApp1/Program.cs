@@ -11,7 +11,7 @@ Parallel.For(0, 10000000000, (i) =>
     try
     {
         var hash = ShortUrlGenerator.MurmurHash(i + "test" + Random.Shared.Next(10000));
-        var s = hash.ToString().Substring(0, hash.ToString().Length - 3);
+        var s = hash.ToString().Substring(0, hash.ToString().Length - 5);
         var code = ShortUrlGenerator.Generator(Convert.ToInt64(s));
         var u= list.TryAdd(code, i);
         if (!u)
