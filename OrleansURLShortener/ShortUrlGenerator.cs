@@ -8,17 +8,18 @@ namespace OrleansURLShortener
         private static readonly char RandomInsertStr = 'a';
         private static readonly string[] Chars = "0,1,2,3,4,5,6,7,8,9,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z".Split(',');
 
-        public static string Generator(long id)
+        public static string Generator(Int128 id)
         {
             var radix = Chars.Length;
             ArrayList arr = new ArrayList();
             //var Quotient = +id;
-            var Quotient = Math.Abs(id);
+
+            var Quotient = Int128.Abs(id);
             do
             {
                 var mod = Quotient % radix;
                 Quotient = (Quotient - mod) / radix;
-                arr.Add(Chars[mod]);
+                arr.Add(Chars[Int32.Parse(mod.ToString())]);
             } while (Quotient != 0);
 
             var codeStr = arr.Cast<object>().Aggregate("", (current, s) => current + s);
@@ -42,14 +43,15 @@ namespace OrleansURLShortener
             return str;
         }
 
-        public static long MurmurHash(string url)
+        public static string MurmurHash(string url)
         {
             var hasher = new MurmurHash3();
             var bytes = Encoding.UTF8.GetBytes(url);
             var result = hasher.ComputeHash(bytes);
             //return result;
-            return System.BitConverter.ToInt64(result, 0);
-            //return string.Concat(Array.ConvertAll(result, x => x.ToString("x2")));
+           // Int128.
+            //return System.BitConverter.ToInt64(result, 0);
+            return string.Concat(Array.ConvertAll(result, x => x.ToString("x2")));
         }
     }
 }

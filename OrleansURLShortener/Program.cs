@@ -50,17 +50,17 @@ app.MapGet("/", () => "Hello World!");
 app.MapGet("/shorten/{*path}", async (HttpContext context, string path) =>
 {
     //var shortenedRouteSegment = Guid.NewGuid().GetHashCode().ToString("X");
-    var shortenedRouteSegment = ShortUrlGenerator.MurmurHash(path);
-    var code = ShortUrlGenerator.Generator(shortenedRouteSegment);
-    var shortenerGrain = grainFactory.GetGrain<IUrlShortenerGrain>(code);
+    //var shortenedRouteSegment = ShortUrlGenerator.MurmurHash(path);
+    //var code = ShortUrlGenerator.Generator(shortenedRouteSegment);
+    //var shortenerGrain = grainFactory.GetGrain<IUrlShortenerGrain>(code);
 
-    await shortenerGrain.SetUrl(code, shortenedRouteSegment.ToString(), path);
-    var resultBuilder = new UriBuilder(context.Request.GetEncodedUrl())
-    {
-        Path = $"/go/{shortenedRouteSegment}"
-    };
+    //await shortenerGrain.SetUrl(code, shortenedRouteSegment.ToString(), path);
+    //var resultBuilder = new UriBuilder(context.Request.GetEncodedUrl())
+    //{
+    //    Path = $"/go/{shortenedRouteSegment}"
+    //};
 
-    return Results.Ok(resultBuilder.Uri);
+    //return Results.Ok(resultBuilder.Uri);
 });
 
 app.MapGet("/go/{shortenedRouteSegment}", async (string shortenedRouteSegment) =>
